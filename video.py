@@ -35,25 +35,25 @@ def draw_rectangle(img, x1, y1, x2, y2, color, thickness):#color,thickness):
     '''
     cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
 
-def foo():
-    '''
-    
-    '''
-    # maintain deque "contrail" effect
-    # n slides
-    pass
 
 def draw_circle(img, x, y, r, color):
     # input RGB image
     cv2.circle(img,(x,y), r, color, -1)
+
 
 def get_center_rect(x1, y1, x2, y2):
     cx = x1 + int((x2-x1)/2)
     cy = y1 + int((y2-y1)/2)
     return cx, cy
 
+
 if __name__ == '__main__':
     cap = cv2.VideoCapture('vid_test_kf.mp4')
+
+    tracked_points = deque()
+    
+    # contrail effect
+    nth_point_fade = 10
     
     while(cap.isOpened()):
         ret, frame = cap.read()
@@ -65,6 +65,7 @@ if __name__ == '__main__':
         
         if not x1:
             cv2.imshow('frame', frame)
+            tracked_points.clear()
 
             if cv2.waitKey(28) & 0xFF == ord('q'):
                 break
@@ -82,7 +83,16 @@ if __name__ == '__main__':
         draw_rectangle(rgb_frame, x1, y1, x2, y2, green_rgb, 1)
         
         cx, cy = get_center_rect(x1, y1, x2, y2)
-        draw_circle(rgb_frame, cx, cy, 3, red_rgb)
+        
+        # deque
+        tracked_points.append([cx, cy])
+
+        if len(tracked_points) % nth_point_fade == 1 and len(tracked_points) > nth_point_fade:
+            tracked_points.popleft()
+            
+        for _point in tracked_points:
+            # draw_circle(rgb_frame, cx, cy, 3, red_rgb)
+            draw_circle(rgb_frame, _point[0], _point[1], 3, red_rgb)
         
         bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
         
