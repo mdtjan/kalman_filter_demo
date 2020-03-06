@@ -19,6 +19,9 @@ def find_corners(img):
     # assume perfect binary thresholding
     
     '''
+    if not np.count_nonzero(img):
+        return None, None, None, None
+    
     x1 = np.min(np.where(mask==255)[1])
     y1 = np.min(np.where(mask==255)[0])
     x2 = np.max(np.where(mask==255)[1])
@@ -36,9 +39,18 @@ def foo():
     '''
     
     '''
-    # use deque to draw line
+    # maintain deque "contrail" effect
+    # n slides
     pass
 
+def draw_circle(img, x, y, r, color):
+    # input RGB image
+    cv2.circle(img,(x,y), r, color, -1)
+
+def get_center_rect(x1, y1, x2, y2):
+    cx = x1 + int((x2-x1)/2)
+    cy = y1 + int((y2-y1)/2)
+    return cx, cy
 
 if __name__ == '__main__':
     cap = cv2.VideoCapture('vid_test_kf.mp4')
@@ -51,9 +63,26 @@ if __name__ == '__main__':
 
         x1, y1, x2, y2 = find_corners(mask)
         
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if not x1:
+            cv2.imshow('frame', frame)
+
+            if cv2.waitKey(28) & 0xFF == ord('q'):
+                break
+            
+            continue
+
+        # if any of these is null, then skip (v)
+        # draw the circle only when there's mask
+        # maintain the circle n frames after
+        # circle is placed in the middle of rectangle
         green_rgb = (153, 255, 51)
+        red_rgb = (255,0,0)
+        
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)        
         draw_rectangle(rgb_frame, x1, y1, x2, y2, green_rgb, 1)
+        
+        cx, cy = get_center_rect(x1, y1, x2, y2)
+        draw_circle(rgb_frame, cx, cy, 3, red_rgb)
         
         bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
         
