@@ -47,9 +47,6 @@ if __name__ == '__main__':
     arg_parser.add_argument('--input', action='store', type=str, required=True)
     args = arg_parser.parse_args()
 
-    # print(args.input)
-
-    # cap = cv2.VideoCapture('vid_test_kf.mp4')
     cap = cv2.VideoCapture(args.input)
     if not cap.read()[0]:
         raise FileNotFoundError
