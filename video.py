@@ -2,7 +2,8 @@ import numpy as np
 import cv2
 from collections import deque
 import argparse
-
+from kalman_filter import KalmanFilter
+import random
 
 def filter_yellow_object(img):
     '''
@@ -55,6 +56,28 @@ if __name__ == '__main__':
     # contrail effect
     nth_point_fade = 10
     
+    random.seed(0)
+    process_noise_noise_constant = random.uniform(0,1)
+    measurement_noise_noise_constant = random.uniform(0,1)
+    
+    # Kalman Filter initialization
+    state_matrix = np.zeros((4, 1))  # [x, y, delta_x, delta_y]
+    estimate_cov = np.eye(state_matrix.shape[0])
+    transition_matrix = np.array([[1, 0, 1, 0],[0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]])
+    process_noise_cov = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]], np.float32) * process_noise_noise_constant
+    measurement_state_matrix = np.zeros((2, 1))
+    observation_matrix = np.array([[1,0,0,0],[0,1,0,0]])
+    measurement_noise_cov = np.array([[1,0],[0,1]]) * measurement_noise_noise_constant
+    
+    kf = KalmanFilter(X=state_matrix, 
+                      P=estimate_cov, 
+                      F=transition_matrix,
+                      Q=process_noise_cov, 
+                      Z=measurement_state_matrix,
+                      H=observation_matrix, 
+                      R=measurement_noise_cov)
+    
+    # current_state_prediction
     while(cap.isOpened()):
         ret, frame = cap.read()
 
@@ -78,13 +101,13 @@ if __name__ == '__main__':
         # circle is placed in the middle of rectangle
         green_rgb = (153, 255, 51)
         red_rgb = (255,0,0)
-        
+        light_blue_rgb = (173,216,230)
+            
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)        
         draw_rectangle(rgb_frame, x1, y1, x2, y2, green_rgb, 1)
         
         cx, cy = get_center_rect(x1, y1, x2, y2)
         
-        # deque
         tracked_points.append([cx, cy])
 
         if len(tracked_points) % nth_point_fade == 1 and len(tracked_points) > nth_point_fade:
@@ -92,7 +115,13 @@ if __name__ == '__main__':
             
         for _point in tracked_points:
             # draw_circle(rgb_frame, cx, cy, 3, red_rgb)
-            draw_circle(rgb_frame, _point[0], _point[1], 3, red_rgb)
+            current_state_measurement = np.array([[_point[0]], [_point[1]]])
+            
+            tracker_point = kf.predict()
+            _ = kf.correct(current_state_measurement)
+
+            # draw_circle(rgb_frame, _point[0], _point[1], 3, red_rgb)
+            draw_circle(rgb_frame, tracker_point[0], tracker_point[1], 3, light_blue_rgb)
         
         bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
         
